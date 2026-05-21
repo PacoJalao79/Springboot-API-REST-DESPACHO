@@ -21,7 +21,8 @@ jobs:
         cache: maven
 
     - name: Build con Maven
-      # La bandera -DskipTests optimiza el tiempo de compilación ignorando los tests unitarios en esta fase
+      # Forzamos a Maven a entrar a la subcarpeta antes de buscar el pom.xml
+      working-directory: ./Springboot-API-REST-DESPACHO
       run: mvn clean package -DskipTests -B
 
     - name: Login a Docker Hub
@@ -33,20 +34,18 @@ jobs:
     - name: Build y Push imagen
       uses: docker/build-push-action@v5
       with:
-        context: .
+        # Indicamos que el contexto de construcción (y el Dockerfile) están en la subcarpeta
+        context: ./Springboot-API-REST-DESPACHO
         push: true
-        # Aquí definimos explícitamente el nombre del repositorio que Docker Hub creará
         tags: |
           ${{ secrets.DOCKERHUB_USERNAME }}/back-despachos:latest
 
     - name: Deploy en EC2 Privada (Despachos)
       uses: appleboy/ssh-action@v1.0.3
       with:
-        # Nota que usamos EC2_BACKEND_HOST, que apunta a tu servidor privado (10.0.2.44)
         host: ${{ secrets.EC2_BACKEND_HOST }}
         username: ${{ secrets.EC2_USERNAME }}
         key: ${{ secrets.EC2_SSH_KEY }}
-        # Configuración del Bastión (Jump Host) a través del Frontend
         proxy_host: ${{ secrets.EC2_FRONTEND_HOST }}
         proxy_username: ${{ secrets.EC2_USERNAME }}
         proxy_key: ${{ secrets.EC2_SSH_KEY }}
